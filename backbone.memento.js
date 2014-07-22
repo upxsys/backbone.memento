@@ -25,6 +25,17 @@ define('backbone.memento', ['backbone', 'underscore'], function (Backbone, _) {
       serializer.deserialize(previousState, restoreConfig);
     };
 
+    this.previousState = function(){
+        return mementoStack.previous();
+    };
+
+    this.changes = function(){
+        var currentState = this.attributes;
+        var previousState = this.previousState();
+
+        return deepDiffMapper.map(currentState, previousState);
+    };
+
     this.store = function(){
       var currentState = serializer.serialize();
       mementoStack.push(currentState);
@@ -140,6 +151,10 @@ define('backbone.memento', ['backbone', 'underscore'], function (Backbone, _) {
     this.push = function(attrs){
       attributeStack.push(attrs);
     };
+
+    this.previous = function(){
+      return attributeStack[attributeStack.length -1];
+    };
     
     this.pop = function(restoreConfig) {
       var oldAttrs = attributeStack.pop();
@@ -155,5 +170,76 @@ define('backbone.memento', ['backbone', 'underscore'], function (Backbone, _) {
     initialize();
   };
 
-  return Memento;
+    var deepDiffMapper = function() {
+        return {
+            VALUE_CREATED: 'created',
+            VALUE_UPDATED: 'updated',
+            VALUE_DELETED: 'deleted',
+            VALUE_UNCHANGED: 'unchanged',
+            map: function(obj1, obj2) {
+                if (this.isFunction(obj1) || this.isFunction(obj2)) {
+                    throw 'Invalid argument. Function given, object expected.';
+                }
+                if (this.isValue(obj1) || this.isValue(obj2)) {
+                    var result =  {type: this.compareValues(obj1, obj2), data: obj2 || obj1};
+
+                    if(result['type'] == this.VALUE_CREATED || result['type'] == this.VALUE_UPDATED){
+                        return result['data'];
+                    }else{
+                        return undefined;
+                    }
+                }
+
+                var diff = {};
+                for (var key in obj1) {
+                    if (this.isFunction(obj1[key])) {
+                        continue;
+                    }
+
+                    var value2 = undefined;
+                    if ('undefined' != typeof(obj2[key])) {
+                        value2 = obj2[key];
+                    }
+
+                    var value = this.map(value2, obj1[key]);
+
+                    if(value !== undefined){
+                        diff[key] = value;
+                    }
+                }
+
+                return diff;
+
+            },
+            compareValues: function(value1, value2) {
+                if (value1 === value2) {
+                    return this.VALUE_UNCHANGED;
+                }
+                if ('undefined' == typeof(value1)) {
+                    return this.VALUE_CREATED;
+                }
+                if ('undefined' == typeof(value2)) {
+                    return this.VALUE_DELETED;
+                }
+
+                return this.VALUE_UPDATED;
+            },
+            isFunction: function(obj) {
+                return toString.apply(obj) === '[object Function]';
+            },
+            isArray: function(obj) {
+                return toString.apply(obj) === '[object Array]';
+            },
+            isObject: function(obj) {
+                return toString.apply(obj) === '[object Object]';
+            },
+            isValue: function(obj) {
+                return !this.isObject(obj) && !this.isArray(obj);
+            }
+        }
+    }();
+
+
+    return Memento;
 });
+
