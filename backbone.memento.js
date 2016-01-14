@@ -227,7 +227,7 @@ define('backbone.memento', ['backbone', 'underscore'], function (Backbone, _) {
                 var obj2 = {};
 
                 for (var key in obj) {
-                    if(obj[key]['data'] !== undefined){
+                    if(obj[key].hasOwnProperty(['data'])){
                         if(obj[key]['type'] == self.VALUE_CREATED || obj[key]['type'] == self.VALUE_UPDATED){
                             obj2[key] = obj[key]['data'];
                         }
