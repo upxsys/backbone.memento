@@ -33,8 +33,12 @@ define('backbone.memento', ['backbone', 'underscore'], function (Backbone, _) {
             var currentState = this.attributes;
             var previousState = this.previousState();
 
-            var results = deepDiffMapper.map(previousState, currentState);
-            return deepDiffMapper.clean(results);
+            if(previousState === undefined){
+                return currentState;
+            }else {
+                var results = deepDiffMapper.map(previousState, currentState);
+                return deepDiffMapper.clean(results);
+            }
         };
 
         this.store = function(){
